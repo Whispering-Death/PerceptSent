@@ -15,11 +15,12 @@ identifier_list=[]
 predicted_labels_list=[]
 review_dict = dict()
 
-vanilla_weights_f1 = dict()
-vanilla_weights_f2 = dict()
-vanilla_bias_f1 = 0
-vanilla_bias_f2 = 0
+model_f1 = dict()
+model_f2 = dict()
+model_bias_f1 = 0
+model_bias_f2 = 0
 words_set= set()
+
 
 
 def writefile():
@@ -54,16 +55,21 @@ def isstopword(word):
 
 def readfile(modelname, filename):
 
-	global vanilla_bias_f2, vanilla_bias_f1, vanilla_weights_f1, vanilla_weights_f2
+	global model_f2, model_f1, model_bias_f1, model_bias_f2
+
+	modelname = modelname.replace(".txt",".pickle")
+	#modelname="vanilla.pickle"
 	f= open(filename,'r')
+
 
 	f1 = open(modelname,'rb')
 	
 
-	vanilla_weights_f1 = pickle.load(f1)
-	vanilla_bias_f1 = pickle.load(f1)
-	vanilla_weights_f2 = pickle.load(f1)
-	vanilla_bias_f2 = pickle.load(f1)
+	model_f1 = pickle.load(f1)
+	model_bias_f1 = pickle.load(f1)
+	model_f2 = pickle.load(f1)
+	model_bias_f2 = pickle.load(f1)
+	#print(model_f1)
 	#print(wordprobs)
 	for review in f:
 		review = review.strip()
@@ -90,9 +96,9 @@ def readfile(modelname, filename):
 		activation_val=0
 
 		for word in temp_dict:
-			if word in vanilla_weights_f1:
-				activation_val= activation_val+ vanilla_weights_f1[word]*temp_dict[word]
-		activation_val+=vanilla_bias_f1
+			if word in model_f1:
+				activation_val= activation_val+ model_f1[word]*temp_dict[word]
+		activation_val+=model_bias_f1
 
 		
 
@@ -101,7 +107,7 @@ def readfile(modelname, filename):
 		predicted_label2 = 'Pos'
 
 		if activation_val<=0:
-			predicted_label1='False'
+			predicted_label1='Fake'
 
 
 
@@ -109,9 +115,9 @@ def readfile(modelname, filename):
 		activation_val=0
 
 		for word in temp_dict:
-			if word in vanilla_weights_f2:
-				activation_val= activation_val+ vanilla_weights_f2[word]*temp_dict[word]
-		activation_val+=vanilla_bias_f2
+			if word in model_f2:
+				activation_val= activation_val+ model_f2[word]*temp_dict[word]
+		activation_val+=model_bias_f2
 
 
 		if activation_val<=0:
