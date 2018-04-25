@@ -18,6 +18,13 @@ vanilla_bias_f1 = 0
 vanilla_bias_f2 = 0
 words_set= set()
 
+averaged_weights_f1 = dict()
+averaged_weights_f2 = dict()
+averaged_bias_f1 = 0.0
+averaged_bias_f2 = 0.0
+
+
+
 def isstopword(word):
 	global stopwords
 	if word in stopwords:
@@ -62,8 +69,11 @@ def preprocess(filename):
 			
 	
 	for word in words_set:
-		vanilla_weights_f2[word]=0
-		vanilla_weights_f1[word]=0
+		vanilla_weights_f2[word]=0.0
+		vanilla_weights_f1[word]=0.0
+		averaged_weights_f1[word]=0.0
+		averaged_weights_f2[word]=0.0
+
 		
 	f.close()
 
@@ -94,6 +104,110 @@ def storeModel():
 	pickle.dump(vanilla_bias_f1, model)
 	pickle.dump(vanilla_weights_f2, model)
 	pickle.dump(vanilla_bias_f2, model)
+
+
+def averaged(filename):
+	global averaged_weights_f1, averaged_weights_f2, averaged_bias_f1, averaged_bias_f2
+	global words_set
+	cached_weights_f1 = dict()
+	cached_weights_f2 = dict()
+	cached_bias_f1 = 0.0
+	cached_bias_f2 = 0.0
+
+	for word in words_set:
+		cached_weights_f1[word]=0.0
+		cached_weights_f2[word]=0.0
+
+	f= open(filename,"r")
+
+	#print("initial weights: ")
+	#print(weights_dict)
+
+	for review in f:
+		review = review.strip()
+		temp_list= review.split(" ")
+		review = review.translate(str.maketrans('','',string.punctuation)).lower()
+		tokList = review.split()
+		# Remove stopwords
+		tokList = list(filter(isstopword, tokList))
+		identifier  = temp_list[0]
+		truth = temp_list[1]
+		posneg = temp_list[2]
+		y1= mapper[truth]
+		y2= mapper[posneg]
+		#print(str(y1)+" , "+str(y2))
+
+		tokList=tokList[3:]
+
+
+		temp_dict = dict()
+		for word in tokList:
+			if word not in temp_dict:
+				temp_dict[word]=1
+			else:
+				temp_dict[word]+=1
+
+
+		counter = 1
+		activation_val = 0
+		#print(temp_dict)
+
+
+		# ******.  (wx+b)
+		for key_word in temp_dict:
+			if key_word not in averaged_weights_f1:
+				print("yes")
+			activation_val+= temp_dict[key_word]*averaged_weights_f1[key_word]
+		activation_val+= averaged_bias_f1
+
+		if activation_val*y1 <=0:
+			for key_word in temp_dict:
+				averaged_weights_f1[key_word]= averaged_weights_f1[key_word]+y1*temp_dict[key_word]
+				cached_weights_f1[key_word]= cached_weights_f1[key_word]+y1*temp_dict[key_word]*counter
+
+			averaged_bias_f1+= y1
+			cached_bias_f1+= y1*counter
+
+
+		
+
+		# ***********************************************************************************
+		activation_val=0
+
+		for key_word in temp_dict:
+			if key_word not in averaged_weights_f2:
+				print("yes")
+			activation_val+= temp_dict[key_word]*averaged_weights_f2[key_word]
+		activation_val+= averaged_bias_f2
+
+		if activation_val*y2 <=0:
+			for key_word in temp_dict:
+				averaged_weights_f2[key_word]= averaged_weights_f2[key_word]+y2*temp_dict[key_word]
+				cached_weights_f2[key_word]= cached_weights_f2[key_word]+y2*temp_dict[key_word]*counter
+			averaged_bias_f2+= y2
+			cached_bias_f2+=y2
+
+		counter+=1
+
+
+
+		#print(weights_dict['way'])
+
+	for word in averaged_weights_f1:
+		averaged_weights_f1[word] = averaged_weights_f1[word] - cached_weights_f1[word]/counter
+		averaged_weights_f2[word] = averaged_weights_f2[word] - cached_weights_f2[word]/counter
+
+	averaged_bias_f1= averaged_bias_f1 - cached_bias_f1/counter
+	averaged_bias_f2= averaged_bias_f2- cached_bias_f2/counter
+
+	#print("Averaged bias for feature1: "+str(averaged_bias_f1))
+	#print("Averaged bias for feature2: "+ str(averaged_bias_f2))
+
+	f.close()
+
+
+
+
 
 
 
@@ -179,7 +293,9 @@ def vanilla(filename):
 if __name__=='__main__':
 	preprocess(sys.argv[1])
 
-	vanilla(sys.argv[1])
+	#vanilla(sys.argv[1])
+	averaged(sys.argv[1])
+
 
 	storeModel()
 	
